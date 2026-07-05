@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محمود البهواشي | Terminal Portfolio</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Hacker Theme (Default) */
+            --bg-color: #0c0c0c;
+            --text-main: #e0e0e0;
+            --text-green: #00ff41;
+            --text-blue: #3b8eea;
+            --text-yellow: #f1fa8c;
+            --text-red: #ff5555;
+            --quick-bg: #1a1a1a;
+            --btn-bg: #2d2d2d;
+            
+            --font-code: 'Fira Code', monospace;
+            --font-ar: 'Tajawal', sans-serif;
+        }
+
+        /* Light Theme */
+        body.theme-light {
+            --bg-color: #f4f4f4;
+            --text-main: #333333;
+            --text-green: #008000;
+            --text-blue: #0000ff;
+            --text-yellow: #b58900;
+            --text-red: #dc322f;
+            --quick-bg: #e0e0e0;
+            --btn-bg: #d0d0d0;
+        }
+
+        /* Dracula Theme */
+        body.theme-dracula {
+            --bg-color: #282a36;
+            --text-main: #f8f8f2;
+            --text-green: #50fa7b;
+            --text-blue: #bd93f9;
+            --text-yellow: #f1fa8c;
+            --text-red: #ff5555;
+            --quick-bg: #21222c;
+            --btn-bg: #44475a;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-code);
+            margin: 0;
+            padding: 0;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 15px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: var(--btn-bg); border-radius: 4px; }
+
+        #terminal-container {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            direction: ltr; /* Commands are always LTR */
+            text-align: left;
+            position: relative;
+            z-index: 10;
+        }
+
+        .output-line {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+
+        .output-line.arabic-text {
+            font-family: var(--font-ar);
+            direction: rtl;
+            text-align: right;
+            font-size: 1.15rem;
+            color: var(--text-main);
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .prompt-user { color: var(--text-green); font-weight: bold; }
+        .prompt-dir { color: var(--text-blue); font-weight: bold; }
+        .prompt-symbol { color: var(--text-main); }
+
+        #input-container { display: flex; align-items: center; margin-top: 0.5rem; }
+
+        #command-input {
+            background: transparent;
+            border: none;
+            color: var(--text-yellow);
+            font-family: var(--font-code);
+            font-size: 15px;
+            flex: 1;
+            outline: none;
+            margin-left: 8px;
+            caret-color: var(--text-green);
+        }
+
+        .cursor-blink {
+            display: inline-block;
+            width: 8px;
+            height: 15px;
+            background-color: var(--text-green);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+            display: none;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        #quick-actions {
+            background-color: var(--quick-bg);
+            border-top: 1px solid var(--btn-bg);
+            padding: 0.75rem 1rem;
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            direction: ltr;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .cmd-btn {
+            background-color: var(--btn-bg);
+            color: var(--text-main);
+            border: 1px solid transparent;
+            padding: 0.4rem 1rem;
+            border-radius: 4px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cmd-btn:hover {
+            color: var(--text-green);
+            border-color: var(--text-green);
+        }
+
+        a { color: var(--text-blue); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        
+        .highlight { color: var(--text-yellow); }
+        .error { color: var(--text-red); }
+
+        #matrix-canvas {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1;
+            display: none;
+            pointer-events: none;
+        }
+        
+        .box-container {
+            border: 1px dashed var(--btn-bg);
+            padding: 15px;
+            margin: 5px 0 15px 0;
+            border-radius: 5px;
+            background: rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body onclick="handleBodyClick()">
+
+    <canvas id="matrix-canvas"></canvas>
+
+    <div id="terminal-container">
+        <div id="output-area"></div>
+        
+        <div id="input-container" style="display: none;">
+            <span class="prompt-user">guest@mbahwashi</span><span class="prompt-symbol">:</span><span class="prompt-dir">~</span><span class="prompt-symbol">$</span>
+            <input type="text" id="command-input" autocomplete="off" spellcheck="false" autofocus>
+            <span id="fake-cursor" class="cursor-blink"></span>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div id="quick-actions" class="no-scrollbar">
+        <button class="cmd-btn" onclick="typeAndExecute('lang ar')">AR</button>
+        <button class="cmd-btn" onclick="typeAndExecute('lang en')">EN</button>
+        <button class="cmd-btn" onclick="typeAndExecute('about')">about</button>
+        <button class="cmd-btn" onclick="typeAndExecute('experience')">experience</button>
+        <button class="cmd-btn" onclick="typeAndExecute('projects')">projects</button>
+        <button class="cmd-btn" onclick="typeAndExecute('contact')">contact</button>
+        <button class="cmd-btn" onclick="typeAndExecute('theme dracula')">dracula</button>
+        <button class="cmd-btn" onclick="typeAndExecute('clear')">clear</button>
+        <button class="cmd-btn" onclick="typeAndExecute('help')">help</button>
+    </div>
+
+    <script>
+        let currentLang = 'ar';
+        let isTyping = false;
+        let audioCtx = null;
+        let isMatrixActive = false;
+
+        const outputArea = document.getElementById('output-area');
+        const commandInput = document.getElementById('command-input');
+        const inputContainer = document.getElementById('input-container');
+        const fakeCursor = document.getElementById('fake-cursor');
+        const matrixCanvas = document.getElementById('matrix-canvas');
+        const ctx = matrixCanvas.getContext('2d');
+
+        // Play short beep for typing
+        function playTypingSound() {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.02, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                
+                osc.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            } catch(e) {}
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function handleBodyClick() {
+            initAudio();
+            if (!isTyping) commandInput.focus();
+            if(isMatrixActive) stopMatrix();
+        }
+
+        commandInput.addEventListener('input', () => {
+            initAudio();
+            playTypingSound();
+        });
+
+        const portfolioData = {
+            ar: {
+                about: `<div class="arabic-text box-container">
+                    <span class="highlight text-xl font-bold"># محمود أشرف محمد البهواشي</span><br>
+                    [ الموقع ]: دمنهور - البحيرة | [ السن ]: 26 سنة | [ الحالة ]: أعزب<br><br>
+                    أنا مبرمج ومطور أنظمة بشغف كبير للبرمجة وتفكير هندسي "بره الصندوق". بدمج بين دراستي لعلم النفس وتحليل الأسواق، وبين البرمجة عشان أطلع بمنتجات قوية ليها تأثير حقيقي، وتساعد في وصول تسويقي ممتاز لأي منتج.<br><br>
+                    بعمل كمان في مجال الإعلانات الرقمية، الجرافيك ديزاين، كتابة المحتوى، وإعداد دراسات جدوى قوية تفصيلية مبنية على فهم عميق لمتطلبات السوق.<br><br>
+                    [+] <b>مؤلف:</b> كاتب ومؤلف كتاب <span class="text-green-400">"الحياة الدنيا رحلة عابرة بآثار باقية"</span>.
+                </div>`,
+                experience: `<div class="arabic-text box-container">
+                    <span class="text-blue-400 font-bold text-lg"># المناصب الإدارية والتأسيسية</span><br>
+                    • <b>مدير شركة 7G VIP الافتراضية:</b> الشركة الأم التي تحتضن وتدير جميع مشاريعي التقنية.<br>
+                    • <b>رئيس مجلس إدارة أكاديمية رفيق لعلوم القرآن:</b> ومدير التسويق بها.<br>
+                    • <b>رئيس مجلس إدارة شركة الفهد للسياحة (سابقاً):</b> لقطاع النقل تحت تبعية شركة أوراسكوم الروسية بمحطة الضبعة النووية.
+                    <br><br>
+                    <span class="text-blue-400 font-bold text-lg"># التسويق والإعلام والعمل الميداني</span><br>
+                    • خبير تسويق إلكتروني، مصمم جرافيك، وكاتب محتوى محترف (إدارة وتكبير صفحات السوشيال ميديا).<br>
+                    • محرر إخباري ومسؤول تسويق إلكتروني سابق بجريدة أخبار البحيرة الرسمية.<br>
+                    • مشرف عام سياحة داخلية ورحلات (شركة البحيرة ترافيل - البركة ترافيل).<br>
+                    • سائق أتوبيسات سياحية (رخصة قيادة درجة ثانية).<br>
+                    • خبرات سابقة في قطاع الإنشاءات بشركة بتروجيت (معسكر أبوسنان والسلام بالصحراء الغربية)، بالإضافة لخبرة سابقة في مجال الإلكترونيات والطهي الاحترافي.
+                </div>`,
+                projects: `<div class="arabic-text box-container">
+                    <span class="text-blue-400 font-bold text-lg"># المشاريع والأنظمة البرمجية</span><br><br>
+                    <span class="text-green-400">drwxr-xr-x</span> <span class="highlight">7G VIP System</span>
+                    <div class="text-sm text-gray-400 mb-2">↳ تطبيق ونظام مستقبلي ضخم، يعمل كـ "ذاكرة خارجية" تسجل كل تفاصيل الحياة اليومية والعملية للإنسان من كافة الجوانب. سيحدث طفرة في الاعتماد الرقمي.</div>
+                    
+                    <span class="text-green-400">drwxr-xr-x</span> <span class="highlight">نظام النقل الذكي (قيد التطوير)</span>
+                    <div class="text-sm text-gray-400 mb-2">↳ ابتكار نظام برمجي ضخم للمساهمة في تنظيم وإدارة حركة نقل الركاب الجماعي والخاص داخل المدن.</div>
+                    
+                    <span class="text-green-400">-rw-r--r--</span> <span class="highlight">أنظمة إدارة متكاملة</span>
+                    <div class="text-sm text-gray-400 mb-2">↳ برمجة وتطوير أنظمة (إدارة الأكاديميات التعليمية، إدارة الحسابات، المتاجر الإلكترونية، والمواقع).</div>
+                    
+                    <span class="text-green-400">-rw-r--r--</span> <span class="highlight">دراسات جدوى وبراندينج</span>
+                    <div class="text-sm text-gray-400">↳ ساهمت في نجاح براندات ومساعدتها على الانتشار في الأسواق بتخطيط هندسي ونفسي دقيق.</div>
+                </div>`,
+                contact: `<div class="arabic-text box-container">
+                    <span class="text-green-400">الواتساب :</span> <a href="https://wa.me/201029718307" target="_blank" class="highlight">01029718307 (اضغط للمراسلة)</a><br>
+                    <span class="text-green-400">هواتف أخري:</span> <br>
+                    <span dir="ltr" class="inline-block text-gray-300">01126615800 | 01557484538 | 01557484539</span><br>
+                    <span dir="ltr" class="inline-block text-gray-300">01212684150 | 01034872505 | 01034770408</span><br>
+                    <span dir="ltr" class="inline-block text-gray-300">966592403481+ (KSA)</span><br>
+                    <span class="text-green-400">إيميل 1  :</span> <a href="mailto:mahmoudelbhwashy10@gmail.com">mahmoudelbhwashy10@gmail.com</a><br>
+                    <span class="text-green-400">إيميل 2  :</span> <a href="mailto:mahmoudelbhwashy10@outlook.com">mahmoudelbhwashy10@outlook.com</a><br>
+                    <span class="text-green-400">فيسبوك   :</span> <a href="https://www.facebook.com/7GVIPCO" target="_blank">facebook.com/7GVIPCO</a>
+                </div>`,
+                help: `الأوامر المتاحة:
+  <span class="highlight">about</span>      - معلومات عني وعن شخصيتي
+  <span class="highlight">experience</span> - خبراتي العملية والإدارية
+  <span class="highlight">projects</span>   - قائمة بالمشاريع والأنظمة اللي طورتها
+  <span class="highlight">contact</span>    - أرقامي وحساباتي للتواصل
+  <span class="highlight">theme</span>      - لتغيير الألوان (اكتب theme hacker أو theme light أو theme dracula)
+  <span class="highlight">lang en</span>    - Switch to English
+  <span class="highlight">clear</span>      - تنظيف الشاشة
+  <span class="text-gray-500 italic">Hint: Try typing 'matrix' or 'coffee'</span>`
+            },
+            en: {
+                about: `<div class="box-container">
+<span class="highlight text-xl font-bold"># Mahmoud Ashraf Mohamed Al-bahwashi</span><br>
+[ Location ]: Damanhour, Beheira | [ Age ]: 26 Years Old | [ Status ]: Single<br><br>
+I am a passionate software programmer and systems developer with an "out-of-the-box" engineering mindset. I merge my technical skills with my background in psychology and market research to build impactful applications that ensure optimal digital marketing reach.<br><br>
+I also work in digital marketing, graphic design, content creation, and conduct strong, detailed feasibility studies based on deep market understanding.<br><br>
+[+] <b>Author of:</b> The book <span class="text-green-400">"الحياة الدنيا رحلة عابرة باثار باقية"</span>.
+</div>`,
+                experience: `<div class="box-container">
+<span class="text-blue-400 font-bold text-lg"># Management & Founders Roles</span><br>
+• <b>Manager of "7G VIP":</b> The virtual parent company managing all my projects.<br>
+• <b>Chairman of Rafiq Academy for Quranic Sciences:</b> Also acting as Marketing Manager.<br>
+• <b>Former Chairman of Al-Fahd Tourism:</b> Transportation sector under Orascom Russia at El Dabaa Nuclear Plant.<br><br>
+
+<span class="text-blue-400 font-bold text-lg"># Marketing, Media & Field Work</span><br>
+• Digital Marketing Expert, Graphic Designer, and Content Creator.<br>
+• Former News Editor and Digital Marketer at the official "Beheira News" Newspaper.<br>
+• General Supervisor of Domestic Tourism (Beheira Travel - Al-Baraka Travel).<br>
+• Tour Bus Driver (Holder of 2nd-degree driving license).<br>
+• Past Experiences: Petrojet constructions (Western Desert camps), Electronics field, and professional culinary arts.
+</div>`,
+                projects: `<div class="box-container">
+<span class="text-blue-400 font-bold text-lg"># Projects & Software Systems</span><br><br>
+<span class="text-green-400">drwxr-xr-x</span> <span class="highlight">7G VIP System</span>
+  ↳ A massive future application acting as an "external memory" recording all daily and practical life details. A digital revolution.<br><br>
+
+<span class="text-green-400">drwxr-xr-x</span> <span class="highlight">Smart Transport System (Under Dev)</span>
+  ↳ A large software system innovating the management of public and private passenger transport inside cities.<br><br>
+
+<span class="text-green-400">-rw-r--r--</span> <span class="highlight">Integrated Management Systems</span>
+  ↳ Developed systems for Educational Academies, Accounting, E-Commerce stores and Websites.<br><br>
+
+<span class="text-green-400">-rw-r--r--</span> <span class="highlight">Feasibility Studies & Branding</span>
+  ↳ Contributed to the success and market penetration of several brands using psychological and engineering planning.
+</div>`,
+                contact: `<div class="box-container">
+<span class="text-green-400">WhatsApp :</span> <a href="https://wa.me/201029718307" target="_blank" class="highlight">01029718307 (Click to chat)</a><br>
+<span class="text-green-400">Other    :</span> 01126615800 | 01557484538 | 01557484539<br>
+               01212684150 | 01034872505 | 01034770408<br>
+               +966592403481 (KSA)<br>
+<span class="text-green-400">Email 1  :</span> <a href="mailto:mahmoudelbhwashy10@gmail.com">mahmoudelbhwashy10@gmail.com</a><br>
+<span class="text-green-400">Email 2  :</span> <a href="mailto:mahmoudelbhwashy10@outlook.com">mahmoudelbhwashy10@outlook.com</a><br>
+<span class="text-green-400">Facebook :</span> <a href="https://www.facebook.com/7GVIPCO" target="_blank">facebook.com/7GVIPCO</a>
+</div>`,
+                help: `Available commands:
+  <span class="highlight">about</span>      - Show information about me
+  <span class="highlight">experience</span> - View my work and management experience
+  <span class="highlight">projects</span>   - List my software projects & systems
+  <span class="highlight">contact</span>    - Show contact information
+  <span class="highlight">theme</span>      - Change UI colors (e.g., theme hacker, theme light, theme dracula)
+  <span class="highlight">lang ar</span>    - التبديل للغة العربية
+  <span class="highlight">clear</span>      - Clear terminal output
+  <span class="text-gray-500 italic">Hint: Try typing 'matrix' or 'coffee'</span>`
+            }
+        };
+
+        const coffeeArt = `
+<span style="color:#d4a373">      )  (
+     (   ) )
+      ) ( (
+    _______)_
+ .-'---------|  
+( C|/\\/\\/\\/\\/|
+ '-./\\/\\/\\/\\/|
+   '_________'
+    '-------'</span>
+<span class="text-yellow-400">Enjoy your coffee, Developer!</span><br><br>`;
+
+        async function runBootSequence() {
+            const bootLines = [
+                "Initializing 7G VIP OS Kernel...",
+                "Loading psychological analysis modules... [OK]",
+                "Mounting engineering systems... [OK]",
+                "Welcome to Mahmoud Al-bahwashi Interactive Terminal.",
+                "Type <span class='highlight'>'help'</span> to see available commands.<br>"
+            ];
+
+            for (let line of bootLines) {
+                printLine(line);
+                await sleep(150); 
+            }
+            inputContainer.style.display = 'flex';
+            focusInput();
+        }
+
+        function printLine(htmlText, isCommand = false) {
+            const div = document.createElement('div');
+            div.className = 'output-line';
+            if (isCommand) {
+                div.innerHTML = `<span class="prompt-user">guest@mbahwashi</span><span class="prompt-symbol">:</span><span class="prompt-dir">~</span><span class="prompt-symbol">$</span> <span style="color:var(--text-yellow)">${htmlText}</span>`;
+            } else {
+                if(htmlText.includes('arabic-text') || htmlText.includes('الأوامر')) {
+                    div.innerHTML = `<div class="arabic-text">${htmlText}</div>`;
+                } else {
+                    div.innerHTML = htmlText;
+                }
+            }
+            outputArea.appendChild(div);
+            scrollToBottom();
+        }
+
+        function executeCommand(cmdString) {
+            const cmd = cmdString.trim().toLowerCase();
+            if (cmd === '') return;
+
+            printLine(cmdString, true); 
+
+            switch (cmd) {
+                case 'help': printLine(portfolioData[currentLang].help); break;
+                case 'about': printLine(portfolioData[currentLang].about); break;
+                case 'experience': printLine(portfolioData[currentLang].experience); break;
+                case 'projects': case 'ls': printLine(portfolioData[currentLang].projects); break;
+                case 'contact': printLine(portfolioData[currentLang].contact); break;
+                case 'clear': outputArea.innerHTML = ''; break;
+                case 'lang ar': 
+                    currentLang = 'ar'; 
+                    printLine(`<span class="text-green-400 arabic-text" style="margin:0;">تم تغيير اللغة إلى العربية بنجاح. اكتب help للأوامر.</span>`); 
+                    break;
+                case 'lang en': 
+                    currentLang = 'en'; 
+                    printLine(`<span class="text-green-400">Language switched to English successfully. Type help for commands.</span>`); 
+                    break;
+                case 'theme light': document.body.className = 'theme-light'; printLine('Theme updated to Light.'); break;
+                case 'theme hacker': document.body.className = ''; printLine('Theme updated to Hacker.'); break;
+                case 'theme dracula': document.body.className = 'theme-dracula'; printLine('Theme updated to Dracula.'); break;
+                case 'coffee': printLine(coffeeArt); break;
+                case 'matrix': startMatrix(); printLine('<span class="text-green-400">Wake up, Neo... (Click anywhere to exit)</span>'); break;
+                case 'sudo': case 'sudo su': printLine(`<span class="error">Nice try! You are not in the sudoers file. This incident will be reported.</span>`); break;
+                default:
+                    if(cmd.startsWith('theme ')) {
+                        printLine(`<span class="error">Unknown theme. Try: theme hacker, theme light, theme dracula.</span>`);
+                    } else {
+                        printLine(`<span class="error">Command not found: ${cmd}</span><br>Type 'help' to see available commands.`);
+                    }
+            }
+        }
+
+        commandInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !isTyping) {
+                const cmd = this.value;
+                executeCommand(cmd);
+                this.value = '';
+                scrollToBottom();
+            }
+        });
+
+        async function typeAndExecute(cmd) {
+            if (isTyping) return;
+            initAudio(); // ensure audio is allowed
+            isTyping = true;
+            commandInput.style.display = 'none';
+            fakeCursor.style.display = 'inline-block';
+            
+            const typeSpan = document.createElement('span');
+            typeSpan.style.color = 'var(--text-yellow)';
+            typeSpan.style.marginLeft = '8px';
+            inputContainer.insertBefore(typeSpan, fakeCursor);
+
+            for (let i = 0; i < cmd.length; i++) {
+                typeSpan.textContent += cmd[i];
+                playTypingSound();
+                await sleep(50); 
+            }
+
+            await sleep(200);
+            executeCommand(cmd);
+            
+            typeSpan.remove();
+            commandInput.style.display = 'block';
+            commandInput.value = '';
+            fakeCursor.style.display = 'none';
+            isTyping = false;
+            focusInput();
+        }
+
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+        function scrollToBottom() { const c = document.getElementById('terminal-container'); c.scrollTop = c.scrollHeight; }
+        function focusInput() { if (!isTyping && !isMatrixActive) commandInput.focus(); }
+
+        let matrixInterval;
+        function startMatrix() {
+            isMatrixActive = true;
+            matrixCanvas.style.display = 'block';
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+
+            const letters = '01ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789مرحباً';
+            const fontSize = 16;
+            const columns = matrixCanvas.width / fontSize;
+            const drops = Array.from({length: columns}).fill(1);
+
+            matrixInterval = setInterval(() => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = letters.charAt(Math.floor(Math.random() * letters.length));
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > matrixCanvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }, 33);
+        }
+
+        function stopMatrix() {
+            isMatrixActive = false;
+            matrixCanvas.style.display = 'none';
+            clearInterval(matrixInterval);
+            focusInput();
+        }
+
+        window.addEventListener('resize', () => {
+            if(isMatrixActive) {
+                matrixCanvas.width = window.innerWidth;
+                matrixCanvas.height = window.innerHeight;
+            }
+        });
+
+        window.onload = runBootSequence;
+
+    </script>
+</body>
+</html>
